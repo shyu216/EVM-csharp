@@ -8,15 +8,18 @@ class VideoProcessor
 {
     static void Main(string[] args)
     {
-        // Console.WriteLine("请输入视频文件路径或按 Enter 搜索默认文件夹中的视频文件：");
+        // Console.WriteLine("Please enter the video file path or press Enter to search for videos in the default folder:");
         // string inputPath = Console.ReadLine();
 
+        // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face.mp4";
+        // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face2.mp4";
         string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/myface2.mp4";
+        
 
         VideoCapture capture = new VideoCapture(inputPath);
         if (!capture.IsOpened)
         {
-            Console.WriteLine("无法打开视频文件。");
+            Console.WriteLine("Unable to open the video file.");
             return;
         }
 
@@ -27,14 +30,10 @@ class VideoProcessor
         Mat frame = new Mat();
         while (capture.Read(frame))
         {
-            Console.WriteLine("处理帧...");
-
             Image<Bgr, byte> frameImage = frame.ToImage<Bgr, byte>();
             CvInvoke.Imshow("Original Video", frameImage.Mat);
 
-          
-
-            // Apply to all channels
+            // Apply processing to all channels
             var yccFrame = frameImage.Convert<Ycc, byte>();
             var yChannel = yccFrame.Split()[0];
             var crChannel = yccFrame.Split()[1];
@@ -50,6 +49,7 @@ class VideoProcessor
             var reconstructedBgr = reconstructedYcc.Convert<Bgr, byte>();
 
             CvInvoke.Imshow("Amplified Video", reconstructedBgr.Mat);
+
             if (CvInvoke.WaitKey(1) == 'q')
             {
                 break;

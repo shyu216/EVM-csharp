@@ -11,10 +11,10 @@ class EvmMagnifier
     private double r2;
     private int nlevels;
     private double attenuation;
-    private List<Image<Gray, byte>> lowpass1;
-    private List<Image<Gray, byte>> lowpass2;
+    private List<Image<Gray, double>> lowpass1;
+    private List<Image<Gray, double>> lowpass2;
 
-    public EvmMagnifier(double alpha = 100, double r1 = 100/60, double r2 = 60/60, int nlevels = 8, double attenuation = 1)
+    public EvmMagnifier(double alpha = 50, double r1 = 60 / 60.0, double r2 = 50 / 60.0, int nlevels = 6, double attenuation = 1)
     {
         this.alpha = alpha;
         this.r1 = r1;
@@ -23,50 +23,48 @@ class EvmMagnifier
         this.attenuation = attenuation;
         this.lowpass1 = null;
         this.lowpass2 = null;
+
+        Console.WriteLine($"EvmMagnifier initialized with alpha: {alpha}, r1: {r1}, r2: {r2}, nlevels: {nlevels}, attenuation: {attenuation}");
     }
 
-    public List<Image<Gray, byte>> BuildGaussianPyramid(Image<Gray, byte> image)
+    public List<Image<Gray, double>> BuildGaussianPyramid(Image<Gray, double> image)
     {
-        var gaussianPyramid = new List<Image<Gray, byte>> { image };
+        var gaussianPyramid = new List<Image<Gray, double>> { image };
         for (int i = 1; i < nlevels; i++)
         {
             image = image.PyrDown();
-            // Console.WriteLine($"Gaussian Pyramid Level {i}: {image.Size}, Channels: {image.NumberOfChannels}");
             gaussianPyramid.Insert(0, image);
         }
         return gaussianPyramid;
     }
 
-    public List<Image<Gray, byte>> ApplyIIRFilter(List<Image<Gray, byte>> pyr)
+    public List<Image<Gray, double>> ApplyIIRFilter(List<Image<Gray, double>> pyr)
     {
         if (lowpass1 == null || lowpass2 == null)
         {
-            lowpass1 = new List<Image<Gray, byte>>();
-            lowpass2 = new List<Image<Gray, byte>>();
+            lowpass1 = new List<Image<Gray, double>>();
+            lowpass2 = new List<Image<Gray, double>>();
 
             foreach (var level in pyr)
             {
                 lowpass1.Add(level.Clone());
                 lowpass2.Add(level.Clone());
             }
-            // Console.WriteLine("Lowpass filters initialized.");
         }
 
-        var filtered = new List<Image<Gray, byte>>();
+        var filtered = new List<Image<Gray, double>>();
         for (int i = 0; i < nlevels; i++)
         {
-            // Console.WriteLine($"Applying IIR Filter at Level {i}: {pyr[i].Size}, Channels: {pyr[i].NumberOfChannels}, Lowpass1: {lowpass1[i].Size}, Channels: {lowpass1[i].NumberOfChannels}, Lowpass2: {lowpass2[i].Size}, Channels: {lowpass2[i].NumberOfChannels}");
             var tempPyr = pyr[i].Clone();
-            CvInvoke.AddWeighted(lowpass1[i], 1 - r1, tempPyr, r1, 0, lowpass1[i]);
-            CvInvoke.AddWeighted(lowpass2[i], 1 - r2, tempPyr, r2, 0, lowpass2[i]);
+            CvInvoke.AddWeighted(lowpass1[i], 1.0 - r1, tempPyr, r1, 0, lowpass1[i]);
+            CvInvoke.AddWeighted(lowpass2[i], 1.0 - r2, tempPyr, r2, 0, lowpass2[i]);
 
             filtered.Add(lowpass1[i] - lowpass2[i]);
-            // Console.WriteLine($"Filtered Level {i}: {filtered[i].Size}, Channels: {filtered[i].NumberOfChannels}");
         }
         return filtered;
     }
 
-    public List<Image<Gray, byte>> AmplifyPyramid(List<Image<Gray, byte>> filtered)
+    public List<Image<Gray, double>> AmplifyPyramid(List<Image<Gray, double>> filtered)
     {
         for (int l = 0; l < nlevels; l++)
         {
@@ -75,15 +73,13 @@ class EvmMagnifier
         return filtered;
     }
 
-    public Image<Gray, byte> ReconstructPyramid(List<Image<Gray, byte>> filtered)
+    public Image<Gray, double> ReconstructPyramid(List<Image<Gray, double>> filtered)
     {
         var upsampled = filtered[0].Clone();
-        // Console.WriteLine($"Reconstructing from Pyramid: Initial Level Size {upsampled.Size}, Channels: {upsampled.NumberOfChannels}");
         for (int l = 1; l < nlevels; l++)
         {
-            // Console.WriteLine($"Upsampling Level {l}: {upsampled.Size}, Channels: {upsampled.NumberOfChannels}, Filtered Level Size: {filtered[l].Size}, Channels: {filtered[l].NumberOfChannels}");
+            upsampled = upsampled.PyrUp();
             upsampled = upsampled.Resize(filtered[l].Width, filtered[l].Height, Inter.Linear);
-            // Console.WriteLine($"Upsampling Level {l}: {upsampled.Size}, Channels: {upsampled.NumberOfChannels}, Filtered Level Size: {filtered[l].Size}, Channels: {filtered[l].NumberOfChannels}");
             upsampled += filtered[l];
         }
 
@@ -100,12 +96,19 @@ class EvmMagnifier
 
     public Image<Gray, byte> ProcessFrame(Image<Gray, byte> frame)
     {
-        // Console.WriteLine($"Processing Frame: {frame.Size}, Channels: {frame.NumberOfChannels}");
-        var pyramid = BuildGaussianPyramid(frame);
+        var frameDouble = frame.Convert<Gray, double>();
+
+        var pyramid = BuildGaussianPyramid(frameDouble);
         var filtered = ApplyIIRFilter(pyramid);
         var amplified = AmplifyPyramid(filtered);
         var upsampled = ReconstructPyramid(amplified);
-        var reconstructed = frame + attenuation * upsampled;
-        return reconstructed;
+
+        var reconstructed = frameDouble + attenuation * upsampled;
+
+        Mat reconstructedMat = reconstructed.Mat;
+        CvInvoke.Min(reconstructedMat, new ScalarArray(255), reconstructedMat); 
+        CvInvoke.Max(reconstructedMat, new ScalarArray(0), reconstructedMat); 
+ 
+        return reconstructed.Convert<Gray, byte>();
     }
 }
