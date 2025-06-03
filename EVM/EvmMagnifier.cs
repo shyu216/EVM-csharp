@@ -1,10 +1,23 @@
+/*
+ * Eulerian Video Magnification (EVM) implementation in C# using Emgu CV.
+ *
+ * This implementation performs spatial decomposition using a Gaussian pyramid
+ * and temporal filtering using a Butterworth filter.
+ *
+ * Optimized for facial pulse detection applications.
+ *
+ * Author: SIHONG YU
+ * Date: 2025.6
+ */
+ 
 using System;
 using Emgu.CV;
 using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
 using System.Collections.Generic;
 
-class EvmButterMagnifier
+
+class EvmMagnifier
 {
     private double alpha;
     private int nLevels;
@@ -17,7 +30,7 @@ class EvmButterMagnifier
     private double[] highA;
     private double[] highB;
 
-    public EvmButterMagnifier(double alpha = 50, double fl = 60 / 60.0, double fh = 100 / 60.0, int nLevels = 6, int fps = 30, double attenuation = 1)
+    public EvmMagnifier(double alpha = 50, double fl = 60 / 60.0, double fh = 100 / 60.0, int nLevels = 6, int fps = 30, double attenuation = 1)
     {
         this.alpha = alpha;
         this.nLevels = nLevels;
@@ -31,7 +44,7 @@ class EvmButterMagnifier
         this.highA = new double[] { 0.08045018, 0.08045018 };
         this.highB = new double[] { 1.0, -0.83909963 };
 
-        Console.WriteLine($"EvmButterMagnifier initialized with alpha: {alpha}, fl: {fl}, fh: {fh}, nLevels: {nLevels}, attenuation: {attenuation}");
+        Console.WriteLine($"EvmMagnifier initialized with alpha: {alpha}, fl: {fl}, fh: {fh}, nLevels: {nLevels}, attenuation: {attenuation}");
         Console.WriteLine($"Butter coefficients - Low: a={string.Join(", ", lowA)}, b={string.Join(", ", lowB)}");
         Console.WriteLine($"Butter coefficients - High: a={string.Join(", ", highA)}, b={string.Join(", ", highB)}");
     }

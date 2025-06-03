@@ -13,8 +13,8 @@ class VideoProcessor
         // string inputPath = Console.ReadLine();
 
         // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face.mp4";
-        // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face2.mp4";
-        string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face.mp4";
+        string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face2.mp4";
+        // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/myface2.mp4";
 
         VideoCapture capture = new VideoCapture(inputPath);
         if (!capture.IsOpened)
@@ -26,9 +26,9 @@ class VideoProcessor
         string outputPath = Path.Combine(Path.GetDirectoryName(inputPath), $"amplified_{Path.GetFileNameWithoutExtension(inputPath)}.mp4");
         VideoWriter writer = new VideoWriter(outputPath, VideoWriter.Fourcc('H', '2', '6', '4'), capture.Get(CapProp.Fps), new Size((int)capture.Get(CapProp.FrameWidth), (int)capture.Get(CapProp.FrameHeight)), true);
 
-        EvmButterMagnifier yMagnifier = new EvmButterMagnifier(attenuation: 1.0);
-        EvmButterMagnifier crMagnifier = new EvmButterMagnifier(attenuation: 1.0);
-        EvmButterMagnifier cbMagnifier = new EvmButterMagnifier(attenuation: 1.0);
+        EvmMagnifier yMagnifier = new EvmMagnifier(attenuation: 1.0);
+        EvmMagnifier crMagnifier = new EvmMagnifier(attenuation: 1.0);
+        EvmMagnifier cbMagnifier = new EvmMagnifier(attenuation: 1.0);
 
         Mat frame = new Mat();
         while (capture.Read(frame))
