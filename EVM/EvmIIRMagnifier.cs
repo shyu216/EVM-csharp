@@ -4,7 +4,7 @@ using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
 using System.Collections.Generic;
 
-class EvmMagnifier
+class EvmIIRMagnifier
 {
     private double alpha;
     private double r1;
@@ -14,7 +14,7 @@ class EvmMagnifier
     private List<Image<Gray, double>> lowpass1;
     private List<Image<Gray, double>> lowpass2;
 
-    public EvmMagnifier(double alpha = 50, double r1 = 60 / 60.0, double r2 = 50 / 60.0, int nlevels = 6, double attenuation = 1)
+    public EvmIIRMagnifier(double alpha = 50, double r1 = 60 / 60.0, double r2 = 50 / 60.0, int nlevels = 6, double attenuation = 1)
     {
         this.alpha = alpha;
         this.r1 = r1;
@@ -24,7 +24,7 @@ class EvmMagnifier
         this.lowpass1 = null;
         this.lowpass2 = null;
 
-        Console.WriteLine($"EvmMagnifier initialized with alpha: {alpha}, r1: {r1}, r2: {r2}, nlevels: {nlevels}, attenuation: {attenuation}");
+        Console.WriteLine($"EvmIIRMagnifier initialized with alpha: {alpha}, r1: {r1}, r2: {r2}, nlevels: {nlevels}, attenuation: {attenuation}");
     }
 
     public List<Image<Gray, double>> BuildGaussianPyramid(Image<Gray, double> image)

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
@@ -13,8 +14,7 @@ class VideoProcessor
 
         // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face.mp4";
         // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face2.mp4";
-        string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/myface2.mp4";
-        
+        string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face.mp4";
 
         VideoCapture capture = new VideoCapture(inputPath);
         if (!capture.IsOpened)
@@ -23,9 +23,12 @@ class VideoProcessor
             return;
         }
 
-        EvmMagnifier yMagnifier = new EvmMagnifier(attenuation: 1.0);
-        EvmMagnifier crMagnifier = new EvmMagnifier(attenuation: 1.0);
-        EvmMagnifier cbMagnifier = new EvmMagnifier(attenuation: 1.0);
+        string outputPath = Path.Combine(Path.GetDirectoryName(inputPath), $"amplified_{Path.GetFileNameWithoutExtension(inputPath)}.mp4");
+        VideoWriter writer = new VideoWriter(outputPath, VideoWriter.Fourcc('H', '2', '6', '4'), capture.Get(CapProp.Fps), new Size((int)capture.Get(CapProp.FrameWidth), (int)capture.Get(CapProp.FrameHeight)), true);
+
+        EvmButterMagnifier yMagnifier = new EvmButterMagnifier(attenuation: 1.0);
+        EvmButterMagnifier crMagnifier = new EvmButterMagnifier(attenuation: 1.0);
+        EvmButterMagnifier cbMagnifier = new EvmButterMagnifier(attenuation: 1.0);
 
         Mat frame = new Mat();
         while (capture.Read(frame))
@@ -33,8 +36,7 @@ class VideoProcessor
             Image<Bgr, byte> frameImage = frame.ToImage<Bgr, byte>();
             CvInvoke.Imshow("Original Video", frameImage.Mat);
 
-            // Apply processing to all channels
-            var yccFrame = frameImage.Convert<Ycc, byte>();
+            var yccFrame = frameImage.Convert<Bgr, byte>();
             var yChannel = yccFrame.Split()[0];
             var crChannel = yccFrame.Split()[1];
             var cbChannel = yccFrame.Split()[2];
@@ -46,9 +48,11 @@ class VideoProcessor
             reconstructedYcc[1] = processedCr;
             reconstructedYcc[2] = processedCb;
 
-            var reconstructedBgr = reconstructedYcc.Convert<Bgr, byte>();
+            var reconstructedBgr = reconstructedYcc.Convert<Ycc, byte>();
 
             CvInvoke.Imshow("Amplified Video", reconstructedBgr.Mat);
+
+            writer.Write(reconstructedBgr.Mat);
 
             if (CvInvoke.WaitKey(1) == 'q')
             {
@@ -57,6 +61,7 @@ class VideoProcessor
         }
 
         capture.Dispose();
+        writer.Dispose();
         CvInvoke.DestroyAllWindows();
     }
 }
