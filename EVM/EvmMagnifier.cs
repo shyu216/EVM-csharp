@@ -10,12 +10,9 @@
  * Date: 2025.6
  */
  
-using System;
 using Emgu.CV;
 using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
-using System.Collections.Generic;
-
 
 class EvmMagnifier
 {
@@ -30,7 +27,7 @@ class EvmMagnifier
     private double[] highA;
     private double[] highB;
 
-    public EvmMagnifier(double alpha = 50, double fl = 60 / 60.0, double fh = 100 / 60.0, int nLevels = 6, int fps = 30, double attenuation = 1)
+    public EvmMagnifier(double alpha = 50, double fl = 60 / 60.0, double fh = 100 / 60.0, int nLevels = 4, int fps = 30, double attenuation = 1)
     {
         this.alpha = alpha;
         this.nLevels = nLevels;
@@ -39,10 +36,18 @@ class EvmMagnifier
         this.lowpass2 = null;
         this.prevPyr = null; // Used for butter only, not IIR
 
-        this.lowA = new double[] { 0.04979798, 0.04979798 };
-        this.lowB = new double[] { 1.0, -0.90040404 };
-        this.highA = new double[] { 0.08045018, 0.08045018 };
-        this.highB = new double[] { 1.0, -0.83909963 };
+        // Example coefficients for fl = 60 / 60.0, fh = 100 / 60.0, fps = 30, generated from scipy.signal.butter
+        //this.lowA = new double[] { 0.04979798, 0.04979798 };
+        //this.lowB = new double[] { 1.0, -0.90040404 };
+        //this.highA = new double[] { 0.08045018, 0.08045018 };
+        //this.highB = new double[] { 1.0, -0.83909963 };
+
+        (double[] lowA, double[] lowB) = IirCoefficients.LowPass((byte)1, fl / fps);
+        (double[] highA, double[] highB) = IirCoefficients.LowPass((byte)1, fh / fps);
+        this.lowA = lowA;
+        this.lowB = lowB;
+        this.highA = highA;
+        this.highB = highB;
 
         Console.WriteLine($"EvmMagnifier initialized with alpha: {alpha}, fl: {fl}, fh: {fh}, nLevels: {nLevels}, attenuation: {attenuation}");
         Console.WriteLine($"Butter coefficients - Low: a={string.Join(", ", lowA)}, b={string.Join(", ", lowB)}");

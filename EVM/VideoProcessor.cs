@@ -1,5 +1,4 @@
-using System;
-using System.IO;
+
 using System.Drawing;
 using Emgu.CV;
 using Emgu.CV.Structure;
@@ -12,8 +11,8 @@ class VideoProcessor
         // Console.WriteLine("Please enter the video file path or press Enter to search for videos in the default folder:");
         // string inputPath = Console.ReadLine();
 
-        // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face.mp4";
-        string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face2.mp4";
+        string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face.mp4";
+        // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face2.mp4";
         // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/myface2.mp4";
 
         VideoCapture capture = new VideoCapture(inputPath);
