@@ -14,6 +14,8 @@ class VideoProcessor
         string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face.mp4";
         // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/face2.mp4";
         // string inputPath = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/myface2.mp4";
+        // string inputPath = "C:/Users/LMAPA/Pictures/Camera Roll/WIN_20250604_14_21_51_Pro.mp4";
+        // string inputPath = "C:/Users/LMAPA/Pictures/Camera Roll/WIN_20250604_14_20_29_Pro.mp4";
 
         VideoCapture capture = new VideoCapture(inputPath);
         if (!capture.IsOpened)
@@ -25,9 +27,10 @@ class VideoProcessor
         string outputPath = Path.Combine(Path.GetDirectoryName(inputPath), $"amplified_{Path.GetFileNameWithoutExtension(inputPath)}.mp4");
         VideoWriter writer = new VideoWriter(outputPath, VideoWriter.Fourcc('H', '2', '6', '4'), capture.Get(CapProp.Fps), new Size((int)capture.Get(CapProp.FrameWidth), (int)capture.Get(CapProp.FrameHeight)), true);
 
-        EvmMagnifier yMagnifier = new EvmMagnifier(attenuation: 1.0);
-        EvmMagnifier crMagnifier = new EvmMagnifier(attenuation: 1.0);
-        EvmMagnifier cbMagnifier = new EvmMagnifier(attenuation: 1.0);
+        EvmMagnifier yMagnifier = new EvmMagnifier(attenuation: 1);
+        // Pulse variation is more visible in red channel
+        EvmMagnifier crMagnifier = new EvmMagnifier(attenuation: 1);
+        EvmMagnifier cbMagnifier = new EvmMagnifier(attenuation: 1);
 
         Mat frame = new Mat();
         while (capture.Read(frame))
