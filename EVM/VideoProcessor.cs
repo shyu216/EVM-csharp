@@ -11,8 +11,14 @@ class VideoProcessor
     {
         string inputFolder = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/";
         string[] videoFiles = {
-            "face.mp4",
-            //"mybody.mp4",
+            //"test_meta_quest.mp4",
+            //"myelbow.mp4",
+            //"myelbow_press.mp4",
+            //"mywrist.mp4",
+            //"mywrist_press.mp4",
+            //"face.mp4",
+            //"finger.mp4",
+            "mybody.mp4",
             //"mybody_light.mp4",
             //"mybody_sun.mp4",
             //"myface.mp4",
@@ -48,15 +54,19 @@ class VideoProcessor
             VideoWriter writer = new VideoWriter(outputPath, VideoWriter.Fourcc('H', '2', '6', '4'), capture.Get(CapProp.Fps),
                 new Size((int)capture.Get(CapProp.FrameWidth), (int)capture.Get(CapProp.FrameHeight)), true);
 
-            EvmMagnifier yMagnifier = new EvmMagnifier(attenuation: 1);
-            EvmMagnifier crMagnifier = new EvmMagnifier(attenuation: 1);
-            EvmMagnifier cbMagnifier = new EvmMagnifier(attenuation: 1);
+            EvmMagnifier yMagnifier = new EvmMagnifier(fl: 20.0/60, fh: 100.0 / 60, nLevels: 8, attenuation: 1);
+            EvmMagnifier crMagnifier = new EvmMagnifier(fl: 20.0 / 60, fh: 100.0 / 60, nLevels: 8, attenuation: 1);
+            EvmMagnifier cbMagnifier = new EvmMagnifier(fl: 20.0 / 60, fh: 100.0 / 60, nLevels: 8, attenuation: 1);
 
             Mat frame = new Mat();
+            int frameCount = 0;
             while (capture.Read(frame))
             {
                 Image<Bgr, byte> frameImage = frame.ToImage<Bgr, byte>();
                 CvInvoke.Imshow("Original Video", frameImage.Mat);
+
+                Console.WriteLine($"Processing frame... {frameCount}");
+                frameCount++;
 
                 var yccFrame = frameImage.Convert<Ycc, byte>();
                 var yChannel = yccFrame.Split()[0];
