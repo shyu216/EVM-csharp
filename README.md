@@ -29,7 +29,7 @@ Currently only first-order. Higher orders = PR welcome 🙏
 
 ## TODO 
 
-- [] Implement the lambda parameter (λ) from the paper. It helps to reduce noise for Laplacian pyramid.
+- [ ] Implement the lambda parameter (λ) from the paper. It helps to reduce noise for Laplacian pyramid.
 
 ## Quick Start
 
