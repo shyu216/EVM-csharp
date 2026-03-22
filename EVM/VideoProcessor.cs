@@ -1,102 +1,150 @@
 using System;
 using System.IO;
-using System.Drawing;
+using System.Threading.Tasks;
 using Emgu.CV;
 using Emgu.CV.Structure;
 using Emgu.CV.CvEnum;
 
-class VideoProcessor
+namespace EVM
 {
-    static void Main(string[] args)
+    public class VideoProcessor
     {
-        string inputFolder = "C:/Users/LMAPA/Documents/GitHub/vision-black-tech/EVM_Matlab/data/";
-        string[] videoFiles = {
-            //"test_meta_quest.mp4",
-            //"myelbow.mp4",
-            //"myelbow_press.mp4",
-            //"mywrist.mp4",
-            //"mywrist_press.mp4",
-            //"face.mp4",
-            //"finger.mp4",
-            "mybody.mp4",
-            //"mybody_light.mp4",
-            //"mybody_sun.mp4",
-            //"myface.mp4",
-            //"myhand_head_inner.mp4",
-            //"myhand_head_outer.mp4",
-            //"myhand_table_inner.mp4",
-            //"myhand_table_outer.mp4"
-        };
+        private readonly VideoProcessorConfig _config;
 
-        string outputFolder = Path.Combine(inputFolder, "csharp");
-        if (!Directory.Exists(outputFolder))
+        public event Action<int>? OnProgress;
+        public event Action<string>? OnLog;
+        public event Action<bool, string>? OnComplete;
+
+        public VideoProcessor(VideoProcessorConfig config)
         {
-            Directory.CreateDirectory(outputFolder);
+            _config = config;
         }
 
-        foreach (string videoFile in videoFiles)
+        public void ProcessAsync()
         {
-            string inputPath = Path.Combine(inputFolder, videoFile);
-            if (!File.Exists(inputPath))
+            Task.Run(() => Process());
+        }
+
+        private void Process()
+        {
+            try
             {
-                Console.WriteLine($"File not found: {inputPath}");
-                continue;
-            }
+                Log($"Starting video processing: {Path.GetFileName(_config.InputFile)}");
+                Log($"Input file: {_config.InputFile}");
+                Log($"Output folder: {_config.OutputFolder}");
+                Log($"Output file: {_config.OutputFileName}");
+                Log($"Parameters - fl: {_config.Fl:F4}, fh: {_config.Fh:F4}, nLevels: {_config.NLevels}, attenuation: {_config.Attenuation}, pyramidType: {_config.PyramidType}");
 
-            VideoCapture capture = new VideoCapture(inputPath);
-            if (!capture.IsOpened)
-            {
-                Console.WriteLine($"Unable to open the video file: {inputPath}");
-                continue;
-            }
-
-            string outputPath = Path.Combine(outputFolder, $"amplified_{Path.GetFileNameWithoutExtension(videoFile)}.mp4");
-            VideoWriter writer = new VideoWriter(outputPath, VideoWriter.Fourcc('H', '2', '6', '4'), capture.Get(CapProp.Fps),
-                new Size((int)capture.Get(CapProp.FrameWidth), (int)capture.Get(CapProp.FrameHeight)), true);
-
-            EvmMagnifier yMagnifier = new EvmMagnifier(fl: 20.0/60, fh: 100.0 / 60, nLevels: 8, attenuation: 1);
-            EvmMagnifier crMagnifier = new EvmMagnifier(fl: 20.0 / 60, fh: 100.0 / 60, nLevels: 8, attenuation: 1);
-            EvmMagnifier cbMagnifier = new EvmMagnifier(fl: 20.0 / 60, fh: 100.0 / 60, nLevels: 8, attenuation: 1);
-
-            Mat frame = new Mat();
-            int frameCount = 0;
-            while (capture.Read(frame))
-            {
-                Image<Bgr, byte> frameImage = frame.ToImage<Bgr, byte>();
-                CvInvoke.Imshow("Original Video", frameImage.Mat);
-
-                Console.WriteLine($"Processing frame... {frameCount}");
-                frameCount++;
-
-                var yccFrame = frameImage.Convert<Ycc, byte>();
-                var yChannel = yccFrame.Split()[0];
-                var crChannel = yccFrame.Split()[1];
-                var cbChannel = yccFrame.Split()[2];
-                var processedY = yMagnifier.ProcessFrame(yChannel);
-                var processedCr = crMagnifier.ProcessFrame(crChannel);
-                var processedCb = cbMagnifier.ProcessFrame(cbChannel);
-                var reconstructedYcc = new Image<Ycc, byte>(frame.Size);
-                reconstructedYcc[0] = processedY;
-                reconstructedYcc[1] = processedCr;
-                reconstructedYcc[2] = processedCb;
-
-                var reconstructedBgr = reconstructedYcc.Convert<Bgr, byte>();
-
-                CvInvoke.Imshow("Amplified Video", reconstructedBgr.Mat);
-
-                writer.Write(reconstructedBgr.Mat);
-
-                if (CvInvoke.WaitKey(1) == 'q')
+                if (!File.Exists(_config.InputFile))
                 {
-                    break;
+                    OnComplete?.Invoke(false, $"Input file does not exist: {_config.InputFile}");
+                    return;
                 }
-            }
 
-            capture.Dispose();
-            writer.Dispose();
-            Console.WriteLine($"Processed and saved: {outputPath}");
+                if (!Directory.Exists(_config.OutputFolder))
+                {
+                    Directory.CreateDirectory(_config.OutputFolder);
+                    Log($"Created output folder: {_config.OutputFolder}");
+                }
+
+                VideoCapture capture = new VideoCapture(_config.InputFile);
+                if (!capture.IsOpened)
+                {
+                    OnComplete?.Invoke(false, $"Unable to open video file: {_config.InputFile}");
+                    return;
+                }
+
+                double videoFps = capture.Get(CapProp.Fps);
+                int frameWidth = (int)capture.Get(CapProp.FrameWidth);
+                int frameHeight = (int)capture.Get(CapProp.FrameHeight);
+                int totalFrames = (int)capture.Get(CapProp.FrameCount);
+
+                // Use FPS from config (detected from video), fallback to video FPS if invalid
+                double processingFps = _config.Fps > 0 ? _config.Fps : (videoFps > 0 ? videoFps : 30);
+                
+                Log($"Video info - FPS: {videoFps:F2}, Resolution: {frameWidth}x{frameHeight}, Total frames: {totalFrames}");
+                Log($"Using processing FPS: {processingFps:F2} for Butterworth filter (critical for accurate frequency filtering)");
+
+                string outputPath = Path.Combine(_config.OutputFolder, _config.OutputFileName);
+                VideoWriter writer = new VideoWriter(outputPath, VideoWriter.Fourcc('H', '2', '6', '4'), videoFps,
+                    new System.Drawing.Size(frameWidth, frameHeight), true);
+
+                EvmMagnifier yMagnifier = new EvmMagnifier(
+                    alpha: _config.Alpha,
+                    fl: _config.Fl, 
+                    fh: _config.Fh, 
+                    nLevels: _config.NLevels, 
+                    fps: (int)processingFps,
+                    attenuation: _config.Attenuation,
+                    pyramidType: _config.PyramidType);
+                EvmMagnifier crMagnifier = new EvmMagnifier(
+                    alpha: _config.Alpha,
+                    fl: _config.Fl, 
+                    fh: _config.Fh, 
+                    nLevels: _config.NLevels, 
+                    fps: (int)processingFps,
+                    attenuation: _config.Attenuation,
+                    pyramidType: _config.PyramidType);
+                EvmMagnifier cbMagnifier = new EvmMagnifier(
+                    alpha: _config.Alpha,
+                    fl: _config.Fl, 
+                    fh: _config.Fh, 
+                    nLevels: _config.NLevels, 
+                    fps: (int)processingFps,
+                    attenuation: _config.Attenuation,
+                    pyramidType: _config.PyramidType);
+
+                Mat frame = new Mat();
+                int frameCount = 0;
+
+                while (capture.Read(frame))
+                {
+                    Image<Bgr, byte> frameImage = frame.ToImage<Bgr, byte>();
+
+                    var yccFrame = frameImage.Convert<Ycc, byte>();
+                    var channels = yccFrame.Split();
+                    var yChannel = channels[0];
+                    var crChannel = channels[1];
+                    var cbChannel = channels[2];
+
+                    var processedY = yMagnifier.ProcessFrame(yChannel);
+                    var processedCr = crMagnifier.ProcessFrame(crChannel);
+                    var processedCb = cbMagnifier.ProcessFrame(cbChannel);
+
+                    var reconstructedYcc = new Image<Ycc, byte>(frame.Size);
+                    reconstructedYcc[0] = processedY;
+                    reconstructedYcc[1] = processedCr;
+                    reconstructedYcc[2] = processedCb;
+
+                    var reconstructedBgr = reconstructedYcc.Convert<Bgr, byte>();
+                    writer.Write(reconstructedBgr.Mat);
+
+                    frameCount++;
+
+                    if (frameCount % 10 == 0 || frameCount == totalFrames)
+                    {
+                        int progress = totalFrames > 0 ? (int)((double)frameCount / totalFrames * 100) : 0;
+                        OnProgress?.Invoke(progress);
+                        Log($"Progress: {frameCount}/{totalFrames} frames ({progress}%)");
+                    }
+                }
+
+                capture.Dispose();
+                writer.Dispose();
+
+                Log($"Processing completed, output file: {outputPath}");
+                OnComplete?.Invoke(true, $"Video processing completed!\nOutput file: {outputPath}\nTotal frames processed: {frameCount}");
+            }
+            catch (Exception ex)
+            {
+                Log($"Error: {ex.Message}");
+                OnComplete?.Invoke(false, $"Error during processing: {ex.Message}");
+            }
         }
 
-        CvInvoke.DestroyAllWindows();
+        private void Log(string message)
+        {
+            OnLog?.Invoke(message);
+        }
     }
 }
